@@ -1,0 +1,30 @@
+// Arbitrum contract
+pragma solidity ^0.8.0;
+
+interface IOptimismBridge {
+    function deposit(address _token, uint256 _amount) external;
+    function withdraw(address _token, uint256 _amount) external;
+}
+
+contract CrossChainBridge {
+    IOptimismBridge public immutable optimismBridge;
+    address public immutable l1Token;
+    address public immutable l2Token;
+
+    constructor(address _optimismBridge, address _l1Token, address _l2Token) {
+        optimismBridge = IOptimismBridge(_optimismBridge);
+        l1Token = _l1Token;
+        l2Token = _l2Token;
+    }
+
+    function deposit(uint256 _amount) external {
+        require(IWETH(l1Token).transferFrom(msg.sender, address(this), _amount), "Transfer failed");
+        require(IWETH(l1Token).approve(address(optimismBridge), _amount), "Approval failed");
+        optimismBridge.deposit(l2Token, _amount);
+    }
+
+    function withdraw(uint256 _amount) external {
+        optimismBridge.withdraw(l2Token, _amount);
+        require(IWETH(l1Token).transfer(msg.sender, _amount), "Transfer failed");
+    }
+}
